@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -191,6 +191,11 @@ main{padding:0 16px; padding-block:14px 108px; max-width:560px; margin:0 auto}
 .domsbox .sect{color:var(--warn)}
 .domsq{font-size:13px; font-weight:600; color:var(--warn); margin-bottom:9px; line-height:1.4}
 
+.legend summary{padding:11px 13px; font-size:12.5px; font-weight:700; color:var(--fg-dim); cursor:pointer}
+.legend dl{margin:0; padding:0 13px 12px; display:grid; grid-template-columns:auto 1fr; gap:7px 10px; font-size:12px; line-height:1.4}
+.legend dt{font-weight:700; white-space:nowrap}
+.legend dt .tag{margin-left:0}
+.legend dd{margin:0; color:var(--fg-dim)}
 .tabs{display:flex; gap:6px; padding:0 16px 10px}
 .tab{flex:1 1 0; border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:7px 0; font-size:12.5px; font-weight:700; color:var(--fg-dim); cursor:pointer}
 .tab[aria-pressed="true"]{background:var(--fg); color:var(--bg); border-color:var(--fg)}
@@ -213,12 +218,12 @@ body{padding-top:env(safe-area-inset-top,0px)}
 <div id="app" hidden>
 <header>
   <div class="hrow">
-    <div class="brand">Rhino Log<small id="meso">Mesociclo 1 · Attivazione</small></div>
-    <div class="sync" id="sync">connetto…</div>
+    <div class="brand">Rhino Log<small id="meso">Mesocycle 1 · Activation</small></div>
+    <div class="sync" id="sync">connecting…</div>
   </div>
   <div class="tabs">
-    <button class="tab" id="tab-log" aria-pressed="true">Allenamento</button>
-    <button class="tab" id="tab-hist" aria-pressed="false">Storico</button>
+    <button class="tab" id="tab-log" aria-pressed="true">Workout</button>
+    <button class="tab" id="tab-hist" aria-pressed="false">History</button>
   </div>
   <div class="days" id="days"></div>
 </header>
@@ -230,8 +235,8 @@ body{padding-top:env(safe-area-inset-top,0px)}
 
 <div class="bar" id="bar">
   <div class="barin">
-    <button class="ghost" id="btn-clear">Svuota</button>
-    <button class="save" id="btn-save">Salva sessione</button>
+    <button class="ghost" id="btn-clear">Clear</button>
+    <button class="save" id="btn-save">Save session</button>
   </div>
   <div class="msg" id="msg"></div>
 </div>
@@ -239,12 +244,12 @@ body{padding-top:env(safe-area-inset-top,0px)}
 
 <form class="login" id="login" hidden>
   <h1>Rhino Log</h1>
-  <p>Accedi una volta: il telefono resta collegato.</p>
+  <p>Sign in once: this phone stays signed in.</p>
   <label for="em">Email</label>
   <input id="em" type="email" autocomplete="username" required>
   <label for="pw">Password</label>
   <input id="pw" type="password" autocomplete="current-password" required>
-  <button class="save" type="submit" id="btn-login">Entra</button>
+  <button class="save" type="submit" id="btn-login">Sign in</button>
   <div class="msg" id="lmsg"></div>
 </form>
 
@@ -253,48 +258,50 @@ body{padding-top:env(safe-area-inset-top,0px)}
 <script>
 "use strict";
 
-/* ============ PROGRAMMA — scheda v4.1, mesociclo 1 ============ */
+/* ============ PROGRAM — plan v4.1, mesocycle 1 ============
+   Keys (k) are database ids: never rename them, only the visible text. */
 const DAYS = [
-  {k:"push", label:"PUSH", sub:"LUN", color:"var(--push)", warm:"Extrarotazioni al cavo 2 × 12-15, leggero", ex:[
-    {k:"pullover",  n:"Pull over al cavo alto", s:2, r:"10-15", rir:"0",   rest:"90s",  m:true, nw:true, cue:'"Superman": apri le scapole, richiama <b>verso il basso</b>'},
-    {k:"peckfly",   n:"Peck fly",               s:2, r:"8-12",  rir:"0",   rest:"90s",  cue:"Mani <b>mai oltre</b> la linea del tronco"},
-    {k:"panca",     n:"Panca 20° multipower",   s:2, r:"6-10",  rir:"1-2", rest:"2min"},
-    {k:"crosslat",  n:"Cross laterals",         s:2, r:"10-15", rir:"0",   rest:"90s",  nw:true, cue:"<b>Sotto l'altezza spalla.</b> Carico medio, zero slancio"},
-    {k:"lorenzo",   n:"Lorenzo press",          s:2, r:"8-11",  rir:"0",   rest:"90s",  cue:"Tricipite in allungamento"}
+  {k:"push", label:"PUSH", sub:"MON", color:"var(--push)", warm:"Cable external rotations 2 × 12-15, light", ex:[
+    {k:"pullover",  n:"Cable pullover (high pulley)", s:2, r:"10-15", rir:"0",   rest:"90s",  m:true, nw:true, cue:'"Superman": spread the shoulder blades, then pull them <b>down</b>'},
+    {k:"peckfly",   n:"Pec deck fly",                 s:2, r:"8-12",  rir:"0",   rest:"90s",  cue:"Hands <b>never past</b> the torso line"},
+    {k:"panca",     n:"Smith machine incline press, 20° bench", s:2, r:"6-10", rir:"1-2", rest:"2min"},
+    {k:"crosslat",  n:"Cable cross lateral raise",    s:2, r:"10-15", rir:"0",   rest:"90s",  nw:true, cue:"<b>Stay below shoulder height.</b> Medium weight, no swinging"},
+    {k:"lorenzo",   n:"Lorenzo press (triceps)",      s:2, r:"8-11",  rir:"0",   rest:"90s",  cue:"Triceps in the lengthened position"}
   ]},
-  {k:"pull", label:"PULL", sub:"MAR", color:"var(--pull)", ex:[
-    {k:"pullover",  n:"Pull over al cavo alto", s:2, r:"10-15", rir:"0", rest:"90s", m:true, nw:true, cue:'"Superman". Tempo <b>2-1-1</b>'},
-    {k:"pulldown",  n:"Pull-down prono",        s:2, r:"8-12",  rir:"0", rest:"90s", m:true, nw:true, cue:"<b>Apri senza elevare</b>, poi gomito all'esterno. Pensa rotazione. Tempo 3-1-1"},
-    {k:"csrow_v",   n:"Chest supported row — mano di lato", s:2, r:"6-10", rir:"0", rest:"2min", nw:true, cue:"Presa verticale, petto in appoggio. È il pesante di dorso"},
-    {k:"tbar",      n:"T-bar — mano da sopra",  s:2, r:"8-12",  rir:"0", rest:"2min", nw:true, cue:"Petto sul cuscino. Presa prona = prende il posteriore"},
-    {k:"scott",     n:"Curl su panca Scott",    s:2, r:"8-12",  rir:"0", rest:"90s"},
-    {k:"crunch",    n:"Crunch al cavo alto",    s:2, r:"10-15", rir:"0", rest:"60-90s", nw:true}
+  {k:"pull", label:"PULL", sub:"TUE", color:"var(--pull)", ex:[
+    {k:"pullover",  n:"Cable pullover (high pulley)", s:2, r:"10-15", rir:"0", rest:"90s", m:true, nw:true, cue:'"Superman". Tempo <b>2-1-1</b>'},
+    {k:"pulldown",  n:"Lat pulldown, overhand grip",  s:2, r:"8-12",  rir:"0", rest:"90s", m:true, nw:true, cue:"<b>Spread the shoulder blades without shrugging</b>, then drive the elbows out. Think rotation. Tempo 3-1-1"},
+    {k:"csrow_v",   n:"Chest-supported row — neutral grip", s:2, r:"6-10", rir:"0", rest:"2min", nw:true, cue:"Neutral (vertical) grip, chest on the pad. This is the heavy back exercise"},
+    {k:"tbar",      n:"Chest-supported T-bar row — overhand grip", s:2, r:"8-12", rir:"0", rest:"2min", nw:true, cue:"Chest on the pad. Overhand grip = rear delts"},
+    {k:"scott",     n:"Preacher curl",                s:2, r:"8-12",  rir:"0", rest:"90s"},
+    {k:"crunch",    n:"Cable crunch (high pulley)",   s:2, r:"10-15", rir:"0", rest:"60-90s", nw:true}
   ]},
-  {k:"legs", label:"LEGS", sub:"GIO", color:"var(--legs)", ex:[
-    {k:"abduz",   n:"Abduzione al cavo IN PIEDI", s:2, r:"10-15", rir:"1", rest:"jumpset", nw:true,
-     cue:"Anca neutra · <b>punta un filo in fuori</b> · range corto 30-40° · tronco fermo", warn:"Crampo → chiudi il set, abbassa il carico"},
-    {k:"adduz",   n:"Adductor machine",           s:2, r:"10-15", rir:"1", rest:"90s", cue:"Cerca la <b>sensazione</b>, non il carico"},
-    {k:"legext",  n:"Leg extension unilaterale",  s:2, r:"8-12",  rir:"1", rest:"alterna", m:true, nw:true, uni:true,
-     cue:"<b>Alterna SX/DX senza pausa</b>"},
-    {k:"legpress",n:"Leg press orizzontale",      s:2, r:"8-12",  rir:"1-2", rest:"alterna +45-60s", nw:true, uni:true,
-     cue:"<b>Piede in linea con l'anca</b>, non al centro · 3s in discesa · solo nel range che controlli"},
-    {k:"hip",     n:"Hip thrust",                 s:2, r:"8-12",  rir:"1", rest:"2min", nw:true},
-    {k:"stacchi", n:"Stacchi gambe semitese",     s:2, r:"6-9",   rir:"1-2", rest:"2min"},
-    {k:"legcurl", n:"Leg curl sdraiato",          s:2, r:"7-10",  rir:"1", rest:"jumpset"},
-    {k:"calf",    n:"Standing calf",              s:2, r:"7-11",  rir:"1", rest:"90s"}
+  {k:"legs", label:"LEGS", sub:"THU", color:"var(--legs)", ex:[
+    {k:"abduz",   n:"STANDING cable hip abduction", s:2, r:"10-15", rir:"1", rest:"superset", nw:true,
+     cue:"Neutral hip · <b>toes turned slightly out</b> · short range, 30-40° · torso still", warn:"Cramp → end the set, lower the weight"},
+    {k:"adduz",   n:"Hip adduction machine",        s:2, r:"10-15", rir:"1", rest:"90s", cue:"Chase the <b>feeling</b>, not the weight"},
+    {k:"legext",  n:"Single-leg leg extension",     s:2, r:"8-12",  rir:"1", rest:"alternate legs", m:true, nw:true, uni:true,
+     cue:"<b>Alternate L/R with no rest</b>"},
+    {k:"legpress",n:"Single-leg horizontal leg press", s:2, r:"8-12", rir:"1-2", rest:"alternate + 45-60s", nw:true, uni:true,
+     cue:"<b>Foot in line with the hip</b>, not centered · 3 s lowering · only the range you control"},
+    {k:"hip",     n:"Hip thrust",                   s:2, r:"8-12",  rir:"1", rest:"2min", nw:true},
+    {k:"stacchi", n:"Romanian deadlift",            s:2, r:"6-9",   rir:"1-2", rest:"2min"},
+    {k:"legcurl", n:"Lying leg curl",               s:2, r:"7-10",  rir:"1", rest:"superset"},
+    {k:"calf",    n:"Standing calf raise",          s:2, r:"7-11",  rir:"1", rest:"90s"}
   ]},
-  {k:"upper", label:"UPPER", sub:"VEN", color:"var(--upper)", warm:"Extrarotazioni al cavo 2 × 12-15, leggero", ex:[
-    {k:"latuni",    n:"Lat machine unilaterale", s:2, r:"6-10",  rir:"0", rest:"2min", uni:true},
-    {k:"csrow_o",   n:"Chest supported row — mano da sopra", s:2, r:"6-10", rir:"0", rest:"2min", cue:"Presa orizzontale e larga"},
-    {k:"chestpress",n:"Chest press ai cavi",     s:2, r:"8-12",  rir:"0", rest:"2min", nw:true,
-     cue:"<b>Maniglie a toccarsi al finale</b>, anche incrociate. Non aprire troppo in ingresso"},
-    {k:"lento",     n:"Lento multipower 60/75°", s:2, r:"7-12",  rir:"1-2", rest:"2min", cue:"Se dà fastidio: riduci il range, o esce"},
-    {k:"alzate",    n:"Alzate laterali manubri", s:2, r:"10-15", rir:"0", rest:"90s", cue:"<b>Niente cheating.</b> Mai sopra l'altezza spalla"},
-    {k:"pushdown",  n:"Push down panca 45°",     s:2, r:"9-13",  rir:"0", rest:"jumpset"},
-    {k:"curl45",    n:"Curl panca 45°",          s:2, r:"8-10",  rir:"0", rest:"90s"}
+  {k:"upper", label:"UPPER", sub:"FRI", color:"var(--upper)", warm:"Cable external rotations 2 × 12-15, light", ex:[
+    {k:"latuni",    n:"Single-arm lat pulldown",    s:2, r:"6-10",  rir:"0", rest:"2min", uni:true},
+    {k:"csrow_o",   n:"Chest-supported row — overhand grip", s:2, r:"6-10", rir:"0", rest:"2min", cue:"Overhand, wide grip"},
+    {k:"chestpress",n:"Cable chest press",          s:2, r:"8-12",  rir:"0", rest:"2min", nw:true,
+     cue:"<b>Handles touch at the end</b>, even crossing over. Don't open too wide at the start"},
+    {k:"lento",     n:"Smith machine shoulder press, 60-75° bench", s:2, r:"7-12", rir:"1-2", rest:"2min", cue:"If it hurts: shorten the range, or drop it"},
+    {k:"alzate",    n:"Dumbbell lateral raise",     s:2, r:"10-15", rir:"0", rest:"90s", cue:"<b>No cheating.</b> Never above shoulder height"},
+    {k:"pushdown",  n:"Cable triceps pushdown, 45° bench", s:2, r:"9-13", rir:"0", rest:"superset"},
+    {k:"curl45",    n:"Incline dumbbell curl, 45° bench", s:2, r:"8-10", rir:"0", rest:"90s"}
   ]}
 ];
-const FB = [["voglia","Voglia"],["mood","Mood"],["energia","Energia"],["rpe","RPE"]];
+const FB = [["voglia","Motivation"],["mood","Mood"],["energia","Energy"],["rpe","RPE"]];
+const KNEE = [["nulla","None"],["lieve","Mild"],["presente","Present"]];
 
 
 /* ============ stato ============ */
@@ -357,26 +364,37 @@ function renderLog(){
 
   if(pend){
     h+=`<div class="sec"><div class="card domsbox">
-      <div class="sect">Ieri · ${esc(pend.body.day.toUpperCase())}</div>
-      <div class="domsq">Com'è il muscolo oggi? Normale: lievi il giorno dopo, tutto a posto in 2-3 notti.</div>
+      <div class="sect">Yesterday · ${esc(pend.body.day.toUpperCase())}</div>
+      <div class="domsq">How sore are the muscles today (DOMS)? Normal: mild the next day, fully recovered within 2-3 nights.</div>
       <div class="pick" id="doms-pick">
-        ${[["0","Niente"],["1","Lievi"],["2","Medi"],["3","Forti"]].map(([v,l])=>
+        ${[["0","None"],["1","Mild"],["2","Moderate"],["3","Severe"]].map(([v,l])=>
           `<button data-doms="${v}" aria-pressed="false">${l}</button>`).join("")}
       </div></div></div>`;
   }
 
-  h+=`<div class="sec"><div class="sect">Prima di iniziare</div><div class="card"><div class="fb">
+  h+=`<div class="sec"><div class="sect">Before you start · 1-5</div><div class="card"><div class="fb">
     <div class="fbgrid">${FB.map(([k,l])=>`
       <div class="fbi"><div class="fbl">${l}</div><div class="pick" data-fb="${k}">
       ${[1,2,3,4,5].map(v=>`<button data-v="${v}" aria-pressed="${draft.feedback[k]==v?"true":"false"}">${v}</button>`).join("")}
       </div></div>`).join("")}</div>
-    <div class="fbnote"><b>Mood</b> = entri in bolla. <b>Energia</b> è un'altra cosa. Tutti alti = il recupero c'è.</div>
+    <div class="fbnote"><b>Mood</b> = getting in the zone. <b>Energy</b> is something else. All high = recovery is there.</div>
   </div></div></div>`;
 
   if(d.warm) h+=`<div class="sec"><div class="card"><div class="ex"><div class="cue" style="margin:0">
-    <b>Riscaldamento</b> · ${esc(d.warm)}</div></div></div></div>`;
+    <b>Warm-up</b> · ${esc(d.warm)}</div></div></div></div>`;
 
-  h+=`<div class="sec"><div class="sect">${d.label} · ${d.ex.length} esercizi</div><div class="card">`;
+  h+=`<div class="sec"><details class="card legend"><summary>How to read this plan</summary><dl>
+    <dt>2 × 8-12</dt><dd>Working sets × rep range. Warm-up sets not counted.</dd>
+    <dt><span class="tag t-r0">RIR 0</span></dt><dd>Reps in reserve. 0 = to technical failure; 1-2 = stop 1-2 reps short (free weights, or loads on shoulder/knee).</dd>
+    <dt><span class="tag t-m">M</span></dt><dd>Benchmark set: set 1 keeps the same weight, reps and tempo for the whole block. The goal is better quality, not more weight.</dd>
+    <dt><span class="tag t-new">NEW</span></dt><dd>New exercise: first 2-3 sessions are for finding the weight and the feel.</dd>
+    <dt>Tempo 3-1-1</dt><dd>Seconds: lowering · pause · lifting.</dd>
+    <dt>L / R</dt><dd>Single-limb exercise: left and right logged separately (tracking a knee asymmetry).</dd>
+    <dt>Superset</dt><dd>Done back to back with the next exercise, rest after the pair.</dd>
+    <dt>Conn. 1-3</dt><dd>Mind-muscle connection with the target muscle. The main goal of this block, more than the weights.</dd>
+  </dl></details></div>`;
+
+  h+=`<div class="sec"><div class="sect">${d.label} · ${d.ex.length} exercises</div><div class="card">`;
   d.ex.forEach((x,i)=>{
     const st=draft.exercises[x.k]||{sets:[],conn:null};
     const pv=prevFor(curDay,x.k);
@@ -384,7 +402,7 @@ function renderLog(){
     h+=`<div class="ex">
       <div class="exh"><div class="num">${i+1}</div><div class="exn">
         <div class="exname">${esc(x.n)}${x.m?'<span class="tag t-m">M</span>':""}${x.nw?'<span class="tag t-new">NEW</span>':""}</div>
-        <div class="pres"><b>${x.s}${x.uni?" /gamba":""} × ${x.r}</b> <span class="tag ${rirCls}">RIR ${x.rir}</span> <span style="color:var(--fg-faint)">${esc(x.rest)}</span></div>
+        <div class="pres"><b>${x.s}${x.uni?" /leg":""} × ${x.r}</b> <span class="tag ${rirCls}">RIR ${x.rir}</span> <span style="color:var(--fg-faint)">${esc(x.rest)}</span></div>
       </div></div>
       ${x.cue?`<div class="cue">${x.cue}</div>`:""}
       ${x.warn?`<div class="cue warn"><b>${esc(x.warn)}</b></div>`:""}
@@ -392,13 +410,13 @@ function renderLog(){
     for(let s=0;s<x.s;s++){
       const v=st.sets[s]||{};
       if(x.uni){
-        h+=`<div class="sr"><div class="sl">${s+1} SX</div>
-          ${numIn(x.k,s,"kg","kg",v.kg)}${numIn(x.k,s,"reps","rip",v.reps)}</div>
-          <div class="sr"><div class="sl">${s+1} DX</div>
-          ${numIn(x.k,s,"kg2","kg",v.kg2)}${numIn(x.k,s,"reps2","rip",v.reps2)}</div>`;
+        h+=`<div class="sr"><div class="sl">${s+1} L</div>
+          ${numIn(x.k,s,"kg","kg",v.kg)}${numIn(x.k,s,"reps","reps",v.reps)}</div>
+          <div class="sr"><div class="sl">${s+1} R</div>
+          ${numIn(x.k,s,"kg2","kg",v.kg2)}${numIn(x.k,s,"reps2","reps",v.reps2)}</div>`;
       }else{
         h+=`<div class="sr"><div class="sl">${s+1}</div>
-          ${numIn(x.k,s,"kg","kg",v.kg)}${numIn(x.k,s,"reps","rip",v.reps)}</div>`;
+          ${numIn(x.k,s,"kg","kg",v.kg)}${numIn(x.k,s,"reps","reps",v.reps)}</div>`;
       }
     }
     h+=`</div>`;
@@ -414,14 +432,14 @@ function renderLog(){
   });
   h+=`</div></div>`;
 
-  h+=`<div class="sec"><div class="sect">Fuori dalla palestra</div><div class="card"><div class="fb">
+  h+=`<div class="sec"><div class="sect">Outside the gym</div><div class="card"><div class="fb">
     <div class="fbgrid">
-      <div class="fbi"><div class="fbl">Ore di sonno</div>${plainIn("sonno.ore","es. 8",draft.sonno.ore)}</div>
-      <div class="fbi"><div class="fbl">Risvegli</div>${plainIn("sonno.risvegli","es. 3",draft.sonno.risvegli)}</div>
+      <div class="fbi"><div class="fbl">Hours of sleep</div>${plainIn("sonno.ore","e.g. 8",draft.sonno.ore)}</div>
+      <div class="fbi"><div class="fbl">Night wakings</div>${plainIn("sonno.risvegli","e.g. 3",draft.sonno.risvegli)}</div>
     </div>
-    <div class="fbl" style="margin-top:11px">Ginocchio oggi (scale / corsa)</div>
-    <div class="pick" data-gin="1">${["nulla","lieve","presente"].map(v=>
-      `<button data-v="${v}" aria-pressed="${draft.ginocchio===v?"true":"false"}" style="text-transform:capitalize">${v}</button>`).join("")}</div>
+    <div class="fbl" style="margin-top:11px">Knee today (stairs / running)</div>
+    <div class="pick" data-gin="1">${KNEE.map(([v,l])=>
+      `<button data-v="${v}" aria-pressed="${draft.ginocchio===v?"true":"false"}">${l}</button>`).join("")}</div>
   </div></div></div>`;
 
   h+=`</div>`;
@@ -474,7 +492,7 @@ function wireLog(){
       dp.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
       b.setAttribute("aria-pressed","true");
       const {error}=await sb.from("rhino_sessions").update({doms_grado:+b.dataset.doms, doms_at:today()}).eq("id",p.uuid);
-      if(error) msg("DOMS non salvati: "+(isNetErr(error)?"sei offline":error.message), true); else sync();
+      if(error) msg("DOMS not saved: "+(isNetErr(error)?"you are offline":error.message), true); else sync();
     };
   });
 }
@@ -488,14 +506,14 @@ function pendingDoms(){
 function renderHist(){
   const el=document.getElementById("view-hist");
   if(!sessions.length){
-    el.innerHTML=`<div class="card"><div class="empty"><b>Ancora nessuna sessione</b>
-      Salva il primo allenamento e qui vedrai come cambiano i carichi e la connessione nel tempo.</div></div>`;
+    el.innerHTML=`<div class="card"><div class="empty"><b>No sessions yet</b>
+      Save your first workout and you'll see how weights and connection change over time.</div></div>`;
     return;
   }
   const d=dayDef(curDay);
   const mine=sessions.filter(s=>s.body.day===curDay).slice(0,12);
-  let h=`<div class="sec"><div class="sect">${d.label} · ultime ${mine.length} sessioni</div><div class="card">`;
-  if(!mine.length){ h+=`<div class="empty">Nessuna sessione <b style="display:inline">${d.label}</b> ancora.</div>`; }
+  let h=`<div class="sec"><div class="sect">${d.label} · last ${mine.length} sessions</div><div class="card">`;
+  if(!mine.length){ h+=`<div class="empty">No <b style="display:inline">${d.label}</b> sessions yet.</div>`; }
   mine.forEach(s=>{
     const f=s.body.feedback||{};
     const vals=Object.values(s.body.exercises||{});
@@ -505,18 +523,18 @@ function renderHist(){
     const avgF=fbv.length?(fbv.reduce((a,b)=>a+b,0)/fbv.length).toFixed(1):"–";
     const col=avgF>=4?"var(--ok)":(avgF>=3?"var(--warn)":"var(--bad)");
     h+=`<div class="hrow2"><div class="hd">${fmtD(s.body.date)}</div>
-      <div class="hv">conn <b>${avgC}</b> <small>· recupero</small> <span style="color:${col}">${avgF}</span>
+      <div class="hv">conn <b>${avgC}</b> <small>· recovery</small> <span style="color:${col}">${avgF}</span>
       ${s.body.doms?`<span class="pill" style="background:var(--surface-2);color:var(--fg-dim)">DOMS ${s.body.doms.grado}</span>`:""}</div></div>`;
   });
   h+=`</div></div>`;
 
-  h+=`<div class="sec"><div class="sect">Progressione per esercizio</div><div class="card">`;
+  h+=`<div class="sec"><div class="sect">Progress by exercise · top set</div><div class="card">`;
   d.ex.forEach(x=>{
     const pts=sessions.filter(s=>s.body.day===curDay).map(s=>({d:s.body.date,e:s.body.exercises?.[x.k]}))
       .filter(p=>p.e&&p.e.sets?.some(z=>z&&z.kg)).slice(0,5).reverse();
     const txt = pts.length
       ? pts.map(p=>{ const best=Math.max(...p.e.sets.filter(z=>z&&z.kg).map(z=>z.kg)); return best; }).join(" → ")+" kg"
-      : "<small>nessun dato</small>";
+      : "<small>no data</small>";
     h+=`<div class="hrow2"><div class="hd" style="flex:1 1 auto;min-width:0">${esc(x.n)}</div>
       <div class="hv">${txt}</div></div>`;
   });
@@ -583,7 +601,7 @@ async function flushOutbox(){
   const box=lsGet(OUTBOX,{});
   for(const [id,body] of Object.entries(box)){
     try{ await pushSession(body); delete box[id]; lsSet(OUTBOX,box); }
-    catch(e){ if(isNetErr(e)) break; else { delete box[id]; lsSet(OUTBOX,box); msg("Una sessione in coda è stata rifiutata: "+(e.message||"errore"), true); } }
+    catch(e){ if(isNetErr(e)) break; else { delete box[id]; lsSet(OUTBOX,box); msg("A queued session was rejected: "+(e.message||"error"), true); } }
   }
   return Object.keys(lsGet(OUTBOX,{})).length;
 }
@@ -596,8 +614,8 @@ function isNetErr(e){
 function setSync(state, extra){
   const sy=document.getElementById("sync");
   const q=Object.keys(lsGet(OUTBOX,{})).length;
-  const txt={on:"sincronizzato", off:"offline", err:"errore", wait:"connetto…"}[state];
-  sy.textContent = txt + (q?` · ${q} in coda`:"") + (extra||"");
+  const txt={on:"synced", off:"offline", err:"error", wait:"connecting…"}[state];
+  sy.textContent = txt + (q?` · ${q} queued`:"") + (extra||"");
   sy.className = "sync" + (state==="on"&&!q?" on":(state==="wait"?"":" off"));
 }
 
@@ -627,10 +645,10 @@ function render(){
 function renderFoot(){
   const el=document.getElementById("view-hist");
   const f=document.createElement("div"); f.className="foot";
-  f.innerHTML=`<span>${esc(sbUserEmail||"")}</span><button id="btn-out">Esci</button>`;
+  f.innerHTML=`<span>${esc(sbUserEmail||"")}</span><button id="btn-out">Sign out</button>`;
   el.appendChild(f);
   f.querySelector("#btn-out").onclick=async()=>{
-    if(!confirm("Uscire? Le bozze e la coda restano sul telefono.")) return;
+    if(!confirm("Sign out? Drafts and queued sessions stay on this phone.")) return;
     await sb.auth.signOut(); location.reload();
   };
 }
@@ -643,7 +661,7 @@ function refreshSave(){
   const id=sid(draft.date,draft.day);
   const saved = sessions.some(s=>s.id===id) || !!lsGet(OUTBOX,{})[id];
   b.disabled = saving || !filled();
-  b.textContent = saving ? "Salvo…" : (saved ? "Aggiorna sessione" : "Salva sessione");
+  b.textContent = saving ? "Saving…" : (saved ? "Update session" : "Save session");
   b.classList.toggle("done", saved && !saving);
 }
 function msg(t,err){ const m=document.getElementById("msg"); m.textContent=t||""; m.classList.toggle("err",!!err); }
@@ -657,16 +675,16 @@ document.getElementById("btn-save").onclick=async()=>{
   try{
     await pushSession(body);
     dropDraft(body.day);
-    msg("Salvata nel database.");
+    msg("Saved to the database.");
     await sync();
   }catch(e){
     if(isNetErr(e)){
       const box=lsGet(OUTBOX,{}); box[id]=body; lsSet(OUTBOX,box);
       dropDraft(body.day);
-      msg("Sei offline: salvata sul telefono, parte da sola appena torna la rete.");
+      msg("You're offline: saved on this phone, it will upload by itself when you're back online.");
       setSync("off");
     }else{
-      msg("Non salvata ("+(e.message||"errore")+"). I dati restano sul telefono.", true);
+      msg("Not saved ("+(e.message||"error")+"). Your data stays on this phone.", true);
     }
   }
   saving=false; refreshSave();
@@ -674,7 +692,7 @@ document.getElementById("btn-save").onclick=async()=>{
 document.getElementById("btn-clear").onclick=()=>{
   dropDraft(curDay);
   draft=blank(curDay);
-  render(); msg("Svuotata (solo sul telefono, non cancella quella salvata).");
+  render(); msg("Cleared (on this phone only, the saved session is untouched).");
 };
 document.getElementById("tab-log").onclick=()=>{tab="log";
   document.getElementById("tab-log").setAttribute("aria-pressed","true");
@@ -696,7 +714,7 @@ document.getElementById("login").onsubmit=async ev=>{
   const {data,error}=await sb.auth.signInWithPassword({
     email:document.getElementById("em").value.trim(), password:document.getElementById("pw").value});
   b.disabled=false;
-  if(error){ lm.textContent=error.message==="Invalid login credentials"?"Email o password errate.":error.message; lm.classList.add("err"); return; }
+  if(error){ lm.textContent=error.message==="Invalid login credentials"?"Wrong email or password.":error.message; lm.classList.add("err"); return; }
   sbUserEmail=data.user?.email||"";
   showApp(); sync();
 };
@@ -705,7 +723,7 @@ document.getElementById("login").onsubmit=async ev=>{
   sessions=lsGet(CACHE,[]);
   draft=loadDraft(curDay);
   const cfg=window.RHINO_CONFIG;
-  if(!cfg||!window.supabase){ showApp(); render(); setSync("err"," · config"); msg("Configurazione mancante (config.js).", true); return; }
+  if(!cfg||!window.supabase){ showApp(); render(); setSync("err"," · config"); msg("Missing configuration (config.js).", true); return; }
   sb=window.supabase.createClient(cfg.url, cfg.anonKey, {auth:{persistSession:true, autoRefreshToken:true, storageKey:"rhinolog.auth"}});
   const {data:{session}}=await sb.auth.getSession();
   if(!session){ showLogin(); return; }
