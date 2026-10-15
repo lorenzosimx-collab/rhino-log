@@ -27,6 +27,12 @@ create table if not exists rhino_sessions (
   created_at  timestamptz not null default now(),
   unique (user_id, date, day)
 );
+-- timer durata sessione (migrazione rhinolog_timer_notes, 15/10/2026)
+alter table rhino_sessions
+  add column if not exists started_at timestamptz,
+  add column if not exists ended_at   timestamptz,
+  add column if not exists duration_min numeric(5,1)
+    generated always as (round((extract(epoch from (ended_at - started_at)) / 60)::numeric, 1)) stored;
 
 create table if not exists rhino_exercises (
   session_id  uuid not null references rhino_sessions (id) on delete cascade,
@@ -71,7 +77,8 @@ create policy "own rows" on rhino_sets      for all to authenticated
 -- ---------- Salvataggio atomico ----------
 -- L'app manda la sessione nello stesso JSON che usava l'artifact:
 -- {date, day, feedback:{voglia,mood,energia,rpe}, sonno:{ore,risvegli}, ginocchio,
---  exercises:{<k>:{sets:[{kg,reps,kg2,reps2}], conn}}, doms:{grado,at}|null, deload, note}
+--  exercises:{<k>:{sets:[{kg,reps,kg2,reps2}], conn, note}}, doms:{grado,at}|null, deload, note,
+--  startedAt, endedAt}
 -- Negli unilaterali il client manda sempre le chiavi kg2/reps2 (anche null): è così che
 -- la funzione distingue SX/DX da 'both'. Serie con kg e reps entrambi vuoti non vengono scritte.
 -- Upsert della sessione, poi serie ed esercizi riscritti da zero, tutto in una transazione.
@@ -91,7 +98,7 @@ declare
 begin
   insert into rhino_sessions as t
     (date, day, voglia, mood, energia, rpe, sonno_ore, risvegli, ginocchio,
-     doms_grado, doms_at, deload, note, saved_at)
+     doms_grado, doms_at, deload, note, started_at, ended_at, saved_at)
   values (
     (p->>'date')::date,
     p->>'day',
@@ -106,6 +113,8 @@ begin
     nullif(p#>>'{doms,at}', '')::date,
     coalesce((p->>'deload')::boolean, false),
     nullif(p->>'note', ''),
+    nullif(p->>'startedAt', '')::timestamptz,
+    nullif(p->>'endedAt', '')::timestamptz,
     now()
   )
   on conflict (user_id, date, day) do update set
@@ -113,6 +122,8 @@ begin
     sonno_ore = excluded.sonno_ore, risvegli = excluded.risvegli, ginocchio = excluded.ginocchio,
     doms_grado = coalesce(excluded.doms_grado, t.doms_grado),
     doms_at    = coalesce(excluded.doms_at, t.doms_at),
+    started_at = coalesce(excluded.started_at, t.started_at),
+    ended_at   = coalesce(excluded.ended_at, t.ended_at),
     deload = excluded.deload, note = excluded.note, saved_at = now()
   returning id into sid;
 
@@ -121,7 +132,7 @@ begin
 
   for ex in select key, value from jsonb_each(coalesce(p->'exercises', '{}'::jsonb)) loop
     insert into rhino_exercises (session_id, exercise, conn, note)
-    values (sid, ex.key, nullif(ex.value->>'conn', '')::smallint, nullif(ex.value->>'note', ''));
+    values (sid, ex.key, nullif(ex.value->>'conn', '')::smallint, nullif(btrim(ex.value->>'note'), ''));
 
     i := 0;
     for s in select * from jsonb_array_elements(coalesce(ex.value->'sets', '[]'::jsonb)) loop
@@ -152,7 +163,8 @@ grant execute on function rhino_save_session(jsonb) to authenticated;
 create or replace view rhino_log with (security_invoker = true) as
 select s.date, s.day, st.exercise, st.set_no, st.side, st.kg, st.reps,
        e.conn, s.voglia, s.mood, s.energia, s.rpe, s.ginocchio, s.doms_grado, s.deload,
-       s.user_id, s.id as session_id
+       s.user_id, s.id as session_id,
+       e.note as exercise_note, s.note as session_note, s.duration_min
 from rhino_sessions s
 join rhino_sets st on st.session_id = s.id
 left join rhino_exercises e on e.session_id = s.id and e.exercise = st.exercise;

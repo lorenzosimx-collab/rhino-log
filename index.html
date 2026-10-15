@@ -196,6 +196,17 @@ main{padding:0 16px; padding-block:14px 108px; max-width:560px; margin:0 auto}
 .legend dt{font-weight:700; white-space:nowrap}
 .legend dt .tag{margin-left:0}
 .legend dd{margin:0; color:var(--fg-dim)}
+.note{margin-top:9px}
+.note textarea{
+  width:100%; min-height:38px; resize:none; overflow:hidden; display:block;
+  border:1px dashed var(--line); background:transparent; color:var(--fg);
+  border-radius:8px; padding:8px 9px; font:inherit; font-size:14px; line-height:1.4;
+}
+.note textarea:focus{outline:2px solid var(--accent); outline-offset:-1px; border-style:solid; border-color:transparent; background:var(--bg)}
+.note textarea::placeholder{color:var(--fg-faint)}
+.timer{font-variant-numeric:tabular-nums; min-width:96px; white-space:nowrap}
+.timer.run{border-color:var(--accent); color:var(--accent)}
+.timer.end{color:var(--ok); border-color:var(--ok)}
 .tabs{display:flex; gap:6px; padding:0 16px 10px}
 .tab{flex:1 1 0; border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:7px 0; font-size:12.5px; font-weight:700; color:var(--fg-dim); cursor:pointer}
 .tab[aria-pressed="true"]{background:var(--fg); color:var(--bg); border-color:var(--fg)}
@@ -236,6 +247,7 @@ body{padding-top:env(safe-area-inset-top,0px)}
 <div class="bar" id="bar">
   <div class="barin">
     <button class="ghost" id="btn-clear">Clear</button>
+    <button class="ghost timer" id="btn-timer">▶ Start</button>
     <button class="save" id="btn-save">Save session</button>
   </div>
   <div class="msg" id="msg"></div>
@@ -317,7 +329,7 @@ function dayDef(k){ return DAYS.find(d=>d.k===k); }
 function sid(date,day){ return date+"-"+day; }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function fmtD(iso){ const [y,m,d]=iso.split("-"); return d+"/"+m; }
-function blank(day){ return {date:today(), day, feedback:{}, sonno:{}, ginocchio:"", exercises:{}, doms:null}; }
+function blank(day){ return {date:today(), day, feedback:{}, sonno:{}, ginocchio:"", exercises:{}, doms:null, note:"", startedAt:null, endedAt:null}; }
 
 /* Tre livelli in localStorage, tutti per-telefono:
    draft.<id>  la sessione in corso, salvata a ogni tasto
@@ -428,7 +440,8 @@ function renderLog(){
     }
     h+=`<div class="conn"><div class="connl">Conn.</div><div class="pick" data-conn="${x.k}">
       ${[1,2,3].map(v=>`<button data-v="${v}" aria-pressed="${st.conn==v?"true":"false"}">${v}</button>`).join("")}
-    </div></div></div>`;
+    </div></div>
+    <div class="note"><textarea data-note="${x.k}" rows="1" placeholder="Notes: what you feel, what happens…">${esc(st.note||"")}</textarea></div></div>`;
   });
   h+=`</div></div>`;
 
@@ -440,6 +453,10 @@ function renderLog(){
     <div class="fbl" style="margin-top:11px">Knee today (stairs / running)</div>
     <div class="pick" data-gin="1">${KNEE.map(([v,l])=>
       `<button data-v="${v}" aria-pressed="${draft.ginocchio===v?"true":"false"}">${l}</button>`).join("")}</div>
+  </div></div></div>`;
+
+  h+=`<div class="sec"><div class="sect">Session notes</div><div class="card"><div class="fb note" style="margin:0">
+    <textarea data-snote="1" rows="2" placeholder="How the session went overall: gym crowded, short on time, pain, anything off…">${esc(draft.note||"")}</textarea>
   </div></div></div>`;
 
   h+=`</div>`;
@@ -463,6 +480,16 @@ function wireLog(){
       const arr=draft.exercises[ex].sets;
       arr[+s]=arr[+s]||{};
       arr[+s][f] = i.value===""?undefined:Number(i.value);
+      saveDraft(); markDirty();
+    };
+  });
+  v.querySelectorAll("textarea").forEach(ta=>{
+    grow(ta);
+    ta.oninput=()=>{
+      grow(ta);
+      if(ta.dataset.note){ const k=ta.dataset.note;
+        draft.exercises[k]=draft.exercises[k]||{sets:[],conn:null}; draft.exercises[k].note=ta.value; }
+      else draft.note=ta.value;
       saveDraft(); markDirty();
     };
   });
@@ -522,7 +549,8 @@ function renderHist(){
     const fbv=[f.voglia,f.mood,f.energia,f.rpe].filter(Boolean);
     const avgF=fbv.length?(fbv.reduce((a,b)=>a+b,0)/fbv.length).toFixed(1):"–";
     const col=avgF>=4?"var(--ok)":(avgF>=3?"var(--warn)":"var(--bad)");
-    h+=`<div class="hrow2"><div class="hd">${fmtD(s.body.date)}</div>
+    const dur=s.body.durationMin!=null?` <small>· ${Math.round(s.body.durationMin)}′</small>`:"";
+    h+=`<div class="hrow2"><div class="hd">${fmtD(s.body.date)}${dur}</div>
       <div class="hv">conn <b>${avgC}</b> <small>· recovery</small> <span style="color:${col}">${avgF}</span>
       ${s.body.doms?`<span class="pill" style="background:var(--surface-2);color:var(--fg-dim)">DOMS ${s.body.doms.grado}</span>`:""}</div></div>`;
   });
@@ -544,7 +572,7 @@ function renderHist(){
 
 
 /* ============ database (Supabase) ============ */
-const SEL="id,date,day,voglia,mood,energia,rpe,sonno_ore,risvegli,ginocchio,doms_grado,doms_at,deload,note,saved_at,"+
+const SEL="id,date,day,voglia,mood,energia,rpe,sonno_ore,risvegli,ginocchio,doms_grado,doms_at,deload,note,saved_at,started_at,ended_at,duration_min,"+
           "rhino_exercises(exercise,conn,note),rhino_sets(exercise,set_no,side,kg,reps)";
 
 /* riga Supabase → stessa forma della sessione che usa l'interfaccia */
@@ -564,7 +592,8 @@ function fromRow(r){
     sonno:{ore:nn(r.sonno_ore), risvegli:nn(r.risvegli)},
     ginocchio:r.ginocchio||"", exercises:ex,
     doms:r.doms_grado==null?null:{grado:r.doms_grado, at:r.doms_at},
-    deload:!!r.deload, note:r.note||"", savedAt:r.saved_at
+    deload:!!r.deload, note:r.note||"", savedAt:r.saved_at,
+    startedAt:r.started_at||null, endedAt:r.ended_at||null, durationMin:r.duration_min==null?null:Number(r.duration_min)
   }};
 }
 
@@ -634,13 +663,14 @@ async function sync(){
 }
 
 /* ---------- comune ---------- */
+function grow(ta){ ta.style.height="auto"; ta.style.height=ta.scrollHeight+"px"; }
 function render(){
   renderDays();
   document.getElementById("view-log").hidden = tab!=="log";
   document.getElementById("view-hist").hidden = tab!=="hist";
   document.getElementById("bar").hidden = tab!=="log";
   if(tab==="log") renderLog(); else { renderHist(); renderFoot(); }
-  refreshSave();
+  refreshSave(); paintTimer();
 }
 function renderFoot(){
   const el=document.getElementById("view-hist");
@@ -653,7 +683,7 @@ function renderFoot(){
   };
 }
 function filled(){
-  return Object.values(draft.exercises).some(e=>e.conn || e.sets?.some(s=>s&&(s.kg||s.reps)));
+  return Object.values(draft.exercises).some(e=>e.conn || e.note?.trim() || e.sets?.some(s=>s&&(s.kg||s.reps)));
 }
 function markDirty(){ refreshSave(); }
 function refreshSave(){
@@ -666,9 +696,11 @@ function refreshSave(){
 }
 function msg(t,err){ const m=document.getElementById("msg"); m.textContent=t||""; m.classList.toggle("err",!!err); }
 
-document.getElementById("btn-save").onclick=async()=>{
+async function saveSession(){
   if(saving) return;
   saving=true; refreshSave(); msg("");
+  const tm=getTimer();
+  if(tm){ draft.startedAt=tm.start; draft.endedAt=tm.end||new Date().toISOString(); saveDraft(); }
   const body=JSON.parse(JSON.stringify(draft));
   body.savedAt=new Date().toISOString();
   const id=sid(body.date,body.day);
@@ -688,9 +720,46 @@ document.getElementById("btn-save").onclick=async()=>{
     }
   }
   saving=false; refreshSave();
+}
+document.getElementById("btn-save").onclick=saveSession;
+
+/* ---------- timer durata sessione ----------
+   Stato in localStorage per sessione: {start, end}; end null = in corso. Sopravvive a chiusura app e salvataggi.
+   Ogni salvataggio manda startedAt/endedAt (endedAt = adesso se il timer gira ancora); Finish lo ferma. */
+const TIMER="rhinolog.timer.";
+function getTimer(){
+  const id=sid(draft.date,draft.day);
+  const t=lsGet(TIMER+id,null); if(t) return t;
+  return draft.startedAt ? {start:draft.startedAt, end:draft.endedAt} : null;
+}
+function setTimer(t){ const id=sid(draft.date,draft.day); if(t) lsSet(TIMER+id,t); else lsDel(TIMER+id); paintTimer(); }
+function fmtDur(ms){
+  const s=Math.max(0,Math.floor(ms/1000)), h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60;
+  return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(ss).padStart(2,"0");
+}
+function paintTimer(){
+  const b=document.getElementById("btn-timer"); if(!b) return;
+  const t=draft&&getTimer();
+  b.classList.toggle("run", !!(t&&!t.end)); b.classList.toggle("end", !!(t&&t.end));
+  if(!t) b.textContent="▶ Start";
+  else if(!t.end) b.textContent="⏱ "+fmtDur(Date.now()-new Date(t.start));
+  else b.textContent="✓ "+Math.round((new Date(t.end)-new Date(t.start))/60000)+" min";
+}
+document.getElementById("btn-timer").onclick=async()=>{
+  const t=getTimer();
+  if(!t){ setTimer({start:new Date().toISOString(), end:null}); msg("Timer started. Tap it again when you finish."); return; }
+  if(!t.end){
+    if(!confirm("Finish the session? Total time: "+fmtDur(Date.now()-new Date(t.start)))) return;
+    setTimer({start:t.start, end:new Date().toISOString()});
+    if(filled()) await saveSession(); else msg("Time recorded. It will be saved with the session.");
+    return;
+  }
+  if(confirm("Resume the timer? The time since you finished will count.")) setTimer({start:t.start, end:null});
 };
+setInterval(()=>{ if(tab==="log") paintTimer(); }, 1000);
 document.getElementById("btn-clear").onclick=()=>{
   dropDraft(curDay);
+  lsDel(TIMER+sid(today(),curDay));
   draft=blank(curDay);
   render(); msg("Cleared (on this phone only, the saved session is untouched).");
 };
