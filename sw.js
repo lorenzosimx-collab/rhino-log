@@ -2,7 +2,7 @@
 // Guscio (stessa origine + font): cache, aggiornata in background.
 // Le chiamate a Supabase non passano mai dalla cache.
 // Dopo una modifica all'app, incrementa VERSION.
-const VERSION = "rhinolog-v4";
+const VERSION = "rhinolog-v7";
 const SHELL = ["./", "index.html", "config.js", "vendor/supabase.js", "manifest.webmanifest",
                "icons/icon-180.png", "icons/icon-192.png", "icons/icon-512.png"];
 

@@ -76,9 +76,7 @@ header{
   padding:7px 2px 8px; text-align:center; cursor:pointer; min-width:0;
 }
 .day b{display:block; font-family:var(--display); font-weight:800; font-size:13px; letter-spacing:-.1px}
-.day span{display:block; font-size:9.5px; font-weight:600; color:var(--fg-faint); letter-spacing:.5px; margin-top:1px}
 .day.sel{border-color:var(--dc); background:var(--dc); color:#fff}
-.day.sel span{color:rgba(255,255,255,.75)}
 .day.done::after{content:"●"; font-size:7px; color:var(--ok); display:block; line-height:1; margin-top:2px}
 .day.sel.done::after{color:#fff}
 
@@ -270,46 +268,52 @@ body{padding-top:env(safe-area-inset-top,0px)}
 <script>
 "use strict";
 
-/* ============ PROGRAM — plan v4.1, mesocycle 1 ============
+/* ============ PROGRAM — plan v4.2, mesocycle 1 (week 2, revised 16/10/2026) ============
    Keys (k) are database ids: never rename them, only the visible text. */
 const DAYS = [
-  {k:"push", label:"PUSH", sub:"MON", color:"var(--push)", warm:"Cable external rotations 2 × 12-15, light", ex:[
-    {k:"pullover",  n:"Cable pullover (high pulley)", s:2, r:"10-15", rir:"0",   rest:"90s",  m:true, nw:true, cue:'"Superman": spread the shoulder blades, then pull them <b>down</b>'},
-    {k:"peckfly",   n:"Pec deck fly",                 s:2, r:"8-12",  rir:"0",   rest:"90s",  cue:"Hands <b>never past</b> the torso line"},
+  {k:"push", label:"PUSH", color:"var(--push)", warm:"Cable external rotations 2 × 12-15, light", ex:[
+    {k:"pullover",  n:"Cable pullover (high pulley)", s:2, r:"10-15", rir:"0",   rest:"90s",  m:true, nw:true, cue:'"Superman": spread the shoulder blades, then pull them <b>down</b>. Tempo <b>2-1-1</b> (same as Pull: that is what made it felt)', warn:"Left armpit pain on 12/10 → shorten the range, keep the load"},
+    {k:"peckfly",   n:"Pec deck fly",                 s:2, r:"8-12",  rir:"0",   rest:"90s",  cue:"Hands <b>never past</b> the torso line. 45×12+12 at RIR 0 → <b>+1 step</b>"},
     {k:"panca",     n:"Smith machine incline press, 20° bench", s:2, r:"6-10", rir:"1-2", rest:"2min"},
     {k:"crosslat",  n:"Cable cross lateral raise",    s:2, r:"10-15", rir:"0",   rest:"90s",  nw:true, cue:"<b>Stay below shoulder height.</b> Medium weight, no swinging"},
+    {k:"revfly",    n:"Reverse cable fly (rear delt)", s:2, r:"12-15", rir:"0",  rest:"90s",  nw:true,
+     cue:"<b>Rear delt — the only weak part of the shoulder.</b> Cables crossed, neutral/prone grip, elbow at shoulder height · <b>short range</b>, stop before the end · light load, the feeling decides",
+     warn:"Lax shoulder: if you feel it at the front of the joint or at the end of the range, shorten it. First session: 1 set"},
     {k:"lorenzo",   n:"Lorenzo press (triceps)",      s:2, r:"8-11",  rir:"0",   rest:"90s",  cue:"Triceps in the lengthened position"}
   ]},
-  {k:"pull", label:"PULL", sub:"TUE", color:"var(--pull)", ex:[
+  {k:"pull", label:"PULL", color:"var(--pull)", ex:[
     {k:"pullover",  n:"Cable pullover (high pulley)", s:2, r:"10-15", rir:"0", rest:"90s", m:true, nw:true, cue:'"Superman". Tempo <b>2-1-1</b>'},
     {k:"pulldown",  n:"Lat pulldown, overhand grip",  s:2, r:"8-12",  rir:"0", rest:"90s", m:true, nw:true, cue:"<b>Spread the shoulder blades without shrugging</b>, then drive the elbows out. Think rotation. Tempo 3-1-1"},
-    {k:"csrow_v",   n:"Chest-supported row — neutral grip", s:2, r:"6-10", rir:"0", rest:"2min", nw:true, cue:"Neutral (vertical) grip, chest on the pad. This is the heavy back exercise"},
-    {k:"tbar",      n:"Chest-supported T-bar row — overhand grip", s:2, r:"8-12", rir:"0", rest:"2min", nw:true, cue:"Chest on the pad. Overhand grip = rear delts"},
+    {k:"csrow_v",   n:"Chest-supported row — neutral grip", s:2, r:"6-10", rir:"0", rest:"2min", nw:true, cue:"Neutral (vertical) grip, chest on the pad. This is the heavy back exercise. Tempo <b>3-1-1</b>: <b>hold the same load</b> until you feel the back (conn 1 last week)"},
+    {k:"tbar",      n:"Chest-supported T-bar row — overhand grip", s:2, r:"8-12", rir:"0", rest:"2min", nw:true, cue:"Chest on the pad. Overhand grip = rear delts. Tempo <b>3-1-1</b>, same load (conn 1 last week)"},
     {k:"scott",     n:"Preacher curl",                s:2, r:"8-12",  rir:"0", rest:"90s"},
     {k:"crunch",    n:"Cable crunch (high pulley)",   s:2, r:"10-15", rir:"0", rest:"60-90s", nw:true}
   ]},
-  {k:"legs", label:"LEGS", sub:"THU", color:"var(--legs)", ex:[
+  {k:"legs", label:"LEGS", color:"var(--legs)", ex:[
     {k:"abduz",   n:"STANDING cable hip abduction", s:2, r:"10-15", rir:"1", rest:"superset", nw:true,
-     cue:"Neutral hip · <b>toes turned slightly out</b> · short range, 30-40° · torso still", warn:"Cramp → end the set, lower the weight"},
-    {k:"adduz",   n:"Hip adduction machine",        s:2, r:"10-15", rir:"1", rest:"90s", cue:"Chase the <b>feeling</b>, not the weight"},
+     cue:"Neutral hip · <b>toes turned slightly out</b> · short range, 30-40° · torso still. <b>At the cable, standing.</b> If it is taken: side-lying bodyweight (as on 15/10), same short range", warn:"Cramp → end the set, lower the weight"},
+    {k:"adduz",   n:"Hip adduction machine",        s:2, r:"10-15", rir:"1", rest:"90s", cue:"Chase the <b>feeling</b>, not the weight. 27×15 at conn 3 → <b>+1 step</b>"},
     {k:"legext",  n:"Single-leg leg extension",     s:2, r:"8-12",  rir:"1", rest:"alternate legs", m:true, nw:true, uni:true,
      cue:"<b>Alternate L/R with no rest</b>"},
     {k:"legpress",n:"Single-leg horizontal leg press", s:2, r:"8-12", rir:"1-2", rest:"alternate + 45-60s", nw:true, uni:true,
-     cue:"<b>Foot in line with the hip</b>, not centered · 3 s lowering · only the range you control"},
+     cue:"<b>Foot in line with the hip</b>, not centered · 3 s lowering · only the range you control. First set went to 15 reps → <b>start from 32 kg</b>. Right leg: stop where you can restart out of the bottom"},
     {k:"hip",     n:"Hip thrust",                   s:2, r:"8-12",  rir:"1", rest:"2min", nw:true},
     {k:"stacchi", n:"Romanian deadlift",            s:2, r:"6-9",   rir:"1-2", rest:"2min"},
-    {k:"legcurl", n:"Lying leg curl",               s:2, r:"7-10",  rir:"1", rest:"superset"},
-    {k:"calf",    n:"Standing calf raise",          s:2, r:"7-11",  rir:"1", rest:"90s"}
+    {k:"legcurl", n:"Seated leg curl (the only one in the gym)", s:2, r:"7-10",  rir:"1", rest:"superset",
+     cue:"Back <b>flat against the pad</b>, hold the handles and pull yourself into the seat · stop the range <b>where the pelvis starts to move</b>, even if it is short",
+     warn:"If the lower back still moves: drop it and tell the coach — we swap it, we don't force it"},
+    {k:"calf",    n:"Standing calf raise",          s:2, r:"7-11",  rir:"1", rest:"90s", cue:"73×11 at the top of the range → <b>+1 step</b>"}
   ]},
-  {k:"upper", label:"UPPER", sub:"FRI", color:"var(--upper)", warm:"Cable external rotations 2 × 12-15, light", ex:[
-    {k:"latuni",    n:"Single-arm lat pulldown",    s:2, r:"6-10",  rir:"0", rest:"2min", uni:true},
-    {k:"csrow_o",   n:"Chest-supported row — overhand grip", s:2, r:"6-10", rir:"0", rest:"2min", cue:"Overhand, wide grip"},
+  {k:"upper", label:"UPPER", color:"var(--upper)", warm:"Cable external rotations 2 × 12-15, light", ex:[
+    {k:"latuni",    n:"Single-arm lat pulldown",    s:2, r:"6-10",  rir:"0", rest:"2min", uni:true, cue:"Tempo <b>3-1-1</b>, same load (conn 1 last week). Symmetrical at 32 kg: keep it that way"},
+    {k:"csrow_o",   n:"Chest-supported row — overhand grip", s:2, r:"6-10", rir:"0", rest:"2min", cue:"Overhand, wide grip. Tempo <b>3-1-1</b>, <b>same load</b> (conn 1 last week)", warn:"Pain between the right shoulder blade and the armpit on 16/10 → stop the set, don't push the last reps"},
     {k:"chestpress",n:"Cable chest press",          s:2, r:"8-12",  rir:"0", rest:"2min", nw:true,
-     cue:"<b>Handles touch at the end</b>, even crossing over. Don't open too wide at the start"},
+     cue:"<b>Handles touch at the end</b>, even crossing over. Don't open too wide at the start. 25/side ×12+12 → <b>+1 step</b>",
+     warn:"On 16/10 the shoulders stopped the set, not the chest: keep the start narrower and do the external rotations first"},
     {k:"lento",     n:"Smith machine shoulder press, 60-75° bench", s:2, r:"7-12", rir:"1-2", rest:"2min", cue:"If it hurts: shorten the range, or drop it"},
     {k:"alzate",    n:"Dumbbell lateral raise",     s:2, r:"10-15", rir:"0", rest:"90s", cue:"<b>No cheating.</b> Never above shoulder height"},
     {k:"pushdown",  n:"Cable triceps pushdown, 45° bench", s:2, r:"9-13", rir:"0", rest:"superset"},
-    {k:"curl45",    n:"Incline dumbbell curl, 45° bench", s:2, r:"8-10", rir:"0", rest:"90s"}
+    {k:"curl45",    n:"Incline dumbbell curl, 45° bench", s:2, r:"8-10", rir:"0", rest:"90s", cue:"10×11+11, over the range → <b>12 kg</b>"}
   ]}
 ];
 const FB = [["voglia","Motivation"],["mood","Mood"],["energia","Energy"],["rpe","RPE"]];
@@ -357,7 +361,7 @@ function renderDays(){
   el.innerHTML = DAYS.map(d=>{
     const done = sessions.some(s=>s.id===sid(today(),d.k));
     return `<button class="day${d.k===curDay?" sel":""}${done?" done":""}" data-day="${d.k}" style="--dc:${d.color}">
-      <b>${d.label}</b><span>${d.sub}</span></button>`;
+      <b>${d.label}</b></button>`;
   }).join("");
   el.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{ curDay=b.dataset.day; draft=loadDraft(curDay); render(); });
 }
@@ -389,8 +393,21 @@ function renderLog(){
       <div class="fbi"><div class="fbl">${l}</div><div class="pick" data-fb="${k}">
       ${[1,2,3,4,5].map(v=>`<button data-v="${v}" aria-pressed="${draft.feedback[k]==v?"true":"false"}">${v}</button>`).join("")}
       </div></div>`).join("")}</div>
-    <div class="fbnote"><b>Mood</b> = getting in the zone. <b>Energy</b> is something else. All high = recovery is there.</div>
+    <div class="fbnote"><b>Mood</b> = getting in the zone. <b>Energy</b> is something else. All high = recovery is there. <b>Not sure what to put?</b> Open the scoring guide below.</div>
   </div></div></div>`;
+
+  h+=`<div class="sec"><details class="card legend"><summary>How to score motivation, mood, energy, RPE &amp; Conn.</summary><dl>
+    <dt>When</dt><dd><b>Motivation</b> before you leave the house · <b>Mood</b> and <b>Energy</b> during the session · <b>RPE</b> at the end, looking back. Never leave one blank: an empty field is a hole in the data, not a neutral score.</dd>
+    <dt>Motivation</dt><dd>The drive to go. <b>1</b> going only because it is in the calendar · <b>2</b> had to talk myself into it · <b>3</b> neutral, I go · <b>4</b> happy to go · <b>5</b> wanted it since the morning.</dd>
+    <dt>Mood</dt><dd>Getting in the zone — the head inside the sets. <b>1</b> elsewhere, distracted, the phone wins · <b>2</b> I start the set and drift off · <b>3</b> focused in patches · <b>4</b> focused almost throughout · <b>5</b> in the zone, only you and the machine exist.</dd>
+    <dt>Energy</dt><dd>Physical fuel, independent of the two above. <b>1</b> empty, the stairs are heavy · <b>2</b> flat · <b>3</b> normal · <b>4</b> full · <b>5</b> loaded, could do another session.</dd>
+    <dt>RPE</dt><dd><b>Not how hard a set felt</b> — that is RIR, logged per exercise. This is one score for the whole session: <b>how much of what you had you actually expressed</b>. <b>1</b> expressed nothing, write-off · <b>2</b> below my standard · <b>3</b> did what I had to · <b>4</b> good, above average · <b>5</b> full session, gave everything I had.</dd>
+    <dt>RPE vs RIR</dt><dd>RIR = reps left in the tank on <i>that</i> set (it is in the plan: RIR 0, RIR 1-2). RPE = the verdict on the <i>session</i>. They are not the same thing, do not copy one into the other.</dd>
+    <dt>The link</dt><dd>Your RPE drops when the <b>mood</b> drops, not when the energy drops. All the energy in the world and no focus = no intensity expressed. That is why both are logged.</dd>
+    <dt>Conn. 1-3</dt><dd>How much you felt <b>the target muscle</b> — not pain, not fatigue, not a generic burn. <b>1</b> did not feel it: other muscles did the set · <b>2</b> in patches: the first reps only, or one point of the range · <b>3</b> from the first rep to the last, and you know exactly where you worked.</dd>
+    <dt>Conn. test</dt><dd>If by the evening you cannot say which muscle did that exercise, it was a <b>1</b> — even if you sweated.</dd>
+    <dt>Why Conn.</dt><dd>It is the main goal of this block. Weights flat + Conn. going up <b>is progress</b>, not a plateau. Slowing the tempo down is the most direct way to start feeling a muscle you do not feel.</dd>
+  </dl></details></div>`;
 
   if(d.warm) h+=`<div class="sec"><div class="card"><div class="ex"><div class="cue" style="margin:0">
     <b>Warm-up</b> · ${esc(d.warm)}</div></div></div></div>`;
