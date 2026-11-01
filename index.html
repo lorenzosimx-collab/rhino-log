@@ -70,12 +70,12 @@ header{
 .sync.on{background:var(--ok-bg); color:var(--ok)}
 .sync.off{background:var(--warn-bg); color:var(--warn)}
 
-.days{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:0 16px 10px}
+.days{display:grid; grid-template-columns:repeat(5,1fr); gap:5px; padding:0 16px 10px}
 .day{
   border:1px solid var(--line); background:var(--surface); border-radius:9px;
   padding:7px 2px 8px; text-align:center; cursor:pointer; min-width:0;
 }
-.day b{display:block; font-family:var(--display); font-weight:800; font-size:13px; letter-spacing:-.1px}
+.day b{display:block; font-family:var(--display); font-weight:800; font-size:11.5px; white-space:nowrap; letter-spacing:-.1px}
 .day.sel{border-color:var(--dc); background:var(--dc); color:#fff}
 .day.done::after{content:"●"; font-size:7px; color:var(--ok); display:block; line-height:1; margin-top:2px}
 .day.sel.done::after{color:#fff}
@@ -227,7 +227,7 @@ body{padding-top:env(safe-area-inset-top,0px)}
 <div id="app" hidden>
 <header>
   <div class="hrow">
-    <div class="brand">Rhino Log<small id="meso">Mesocycle 1 · Activation</small></div>
+    <div class="brand">Rhino Log<small id="meso">Mesocycle 2 · Volume</small></div>
     <div class="sync" id="sync">connecting…</div>
   </div>
   <div class="tabs">
@@ -272,48 +272,58 @@ body{padding-top:env(safe-area-inset-top,0px)}
    Keys (k) are database ids: never rename them, only the visible text. */
 const DAYS = [
   {k:"push", label:"PUSH", color:"var(--push)", warm:"Cable external rotations 2 × 12-15, light", ex:[
-    {k:"pullover",  n:"Cable pullover (high pulley)", s:2, r:"10-15", rir:"0",   rest:"90s",  m:true, nw:true, cue:'"Superman": spread the shoulder blades, then pull them <b>down</b>. Tempo <b>2-1-1</b> (same as Pull: that is what made it felt)', warn:"Left armpit pain on 12/10 → shorten the range, keep the load"},
-    {k:"peckfly",   n:"Pec deck fly",                 s:2, r:"8-12",  rir:"0",   rest:"90s",  cue:"Hands <b>never past</b> the torso line. 45×12+12 at RIR 0 → <b>+1 step</b>"},
-    {k:"panca",     n:"Smith machine incline press, 20° bench", s:2, r:"6-10", rir:"1-2", rest:"2min"},
-    {k:"crosslat",  n:"Cable cross lateral raise",    s:2, r:"10-15", rir:"0",   rest:"90s",  nw:true, cue:"<b>Stay below shoulder height.</b> Medium weight, no swinging"},
-    {k:"revfly",    n:"Reverse cable fly (rear delt)", s:2, r:"12-15", rir:"0",  rest:"90s",  nw:true,
-     cue:"<b>Rear delt — the only weak part of the shoulder.</b> Cables crossed, neutral/prone grip, elbow at shoulder height · <b>short range</b>, stop before the end · light load, the feeling decides",
-     warn:"Lax shoulder: if you feel it at the front of the joint or at the end of the range, shorten it. First session: 1 set"},
-    {k:"lorenzo",   n:"Lorenzo press (triceps)",      s:2, r:"8-11",  rir:"0",   rest:"90s",  cue:"Triceps in the lengthened position"}
+    {k:"peckfly",   n:"Pec deck fly",                 s:3, r:"8-12",  rir:"0",   rest:"90s",  cue:"Hands <b>never past</b> the torso line. 50×15 with reps to spare → <b>+1 step</b>"},
+    {k:"panca",     n:"Smith machine incline press, 20° bench", s:3, r:"6-10", rir:"1-2", rest:"2min", cue:"On the Smith you feel the chest far more than on the flat bench (27/10). Plates only: 50 here is not 60 of barbell bench"},
+    {k:"crosslat",  n:"Cable cross lateral raise",    s:3, r:"10-15", rir:"0",   rest:"90s",  cue:"<b>Stay below shoulder height.</b> No swinging. 11×15 → <b>+1 step</b>"},
+    {k:"revfly",    n:"Reverse cable fly (rear delt)", s:3, r:"12-15", rir:"0",  rest:"90s",
+     cue:"<b>Rear delt — the only weak part of the shoulder.</b> Cables crossed, pulley at shoulder height, elbow fixed and level with the shoulder · <b>short range</b>, stop at the line of the shoulders · don't squeeze the shoulder blades",
+     warn:"At 14 kg the traps join in, at 11 they don't (27/10): stay at 11"},
+    {k:"lorenzo",   n:"Lorenzo press (triceps, lengthened)", s:3, r:"8-11", rir:"0", rest:"90s", cue:"Cable at ear height behind you, elbow in front at shoulder level. Triceps in the <b>lengthened</b> position"},
+    {k:"pushdown",  n:"Cable triceps pushdown (shortened)", s:3, r:"9-13", rir:"0", rest:"90s",
+     cue:"Elbows at your sides, shoulder neutral. The pair to the Lorenzo press: that one loads the stretch, this one the squeeze. 46-50 kg at conn 3 (27/10)"}
   ]},
   {k:"pull", label:"PULL", color:"var(--pull)", ex:[
-    {k:"pullover",  n:"Cable pullover (high pulley)", s:2, r:"10-15", rir:"0", rest:"90s", m:true, nw:true, cue:'"Superman". Tempo <b>2-1-1</b>'},
-    {k:"pulldown",  n:"Lat pulldown, overhand grip",  s:2, r:"8-12",  rir:"0", rest:"90s", m:true, nw:true, cue:"<b>Spread the shoulder blades without shrugging</b>, then drive the elbows out. Think rotation. Tempo 3-1-1"},
-    {k:"csrow_v",   n:"Chest-supported row — neutral grip", s:2, r:"6-10", rir:"0", rest:"2min", nw:true, cue:"Neutral (vertical) grip, chest on the pad. This is the heavy back exercise. Tempo <b>3-1-1</b>: <b>hold the same load</b> until you feel the back (conn 1 last week)"},
-    {k:"tbar",      n:"Chest-supported T-bar row — overhand grip", s:2, r:"8-12", rir:"0", rest:"2min", nw:true, cue:"Chest on the pad. Overhand grip = rear delts. Tempo <b>3-1-1</b>, same load (conn 1 last week)"},
-    {k:"scott",     n:"Preacher curl",                s:2, r:"8-12",  rir:"0", rest:"90s"},
-    {k:"crunch",    n:"Cable crunch (high pulley)",   s:2, r:"10-15", rir:"0", rest:"60-90s", nw:true}
+    {k:"pullover",  n:"Cable pullover (high pulley)", s:2, r:"10-15", rir:"0", rest:"90s", m:true,
+     cue:'<b>Elbow stays fixed and almost straight</b> — if you feel the triceps you are bending it, and it becomes a pushdown. Only the shoulder moves. "Superman", tempo 2-1-1',
+     warn:"Don't start with the arms fully overhead: that is end range under load. Start lower. Stays at 2 sets until you feel the back"},
+    {k:"pulldown",  n:"Lat pulldown, overhand grip",  s:3, r:"8-12",  rir:"0", rest:"90s", cue:"<b>Spread the shoulder blades without shrugging</b>, then drive the elbows out. Think rotation. Tempo 3-1-1"},
+    {k:"csrow_v",   n:"Chest-supported row — neutral grip", s:3, r:"6-10", rir:"0", rest:"2min", cue:"Neutral (vertical) grip, chest on the pad. The heavy back exercise. Tempo 3-1-1"},
+    {k:"tbar",      n:"Chest-supported T-bar row — overhand grip", s:3, r:"8-12", rir:"0", rest:"2min", cue:"Chest on the pad. Overhand grip = rear delts. Tempo 3-1-1"},
+    {k:"curlcable", n:"Cable curl, arm behind the body (lengthened)", s:3, r:"8-12", rir:"0", rest:"90s", nw:true,
+     cue:"Low pulley, <b>back to the machine</b>, one step forward: the arm hangs <b>behind</b> the torso, so the biceps starts lengthened. Elbow fixed, don't let it drift forward. Light load — at the cable the tension is constant, which is what stops the forearm taking over"},
+    {k:"scott",     n:"Preacher curl (shortened)",    s:3, r:"8-12",  rir:"0", rest:"90s", cue:"Z-bar, both arms: on biceps there is no asymmetry to measure, so single-arm only costs time"},
+    {k:"crunch",    n:"Cable crunch / bodyweight",    s:3, r:"10-15", rir:"0", rest:"60-90s", cue:"Bodyweight is fine (28/10, conn 3)"}
   ]},
-  {k:"legs", label:"LEGS", color:"var(--legs)", ex:[
-    {k:"abduz",   n:"STANDING cable hip abduction", s:2, r:"10-15", rir:"1", rest:"superset", nw:true,
-     cue:"Neutral hip · <b>toes turned slightly out</b> · short range, 30-40° · torso still. <b>At the cable, standing.</b> If it is taken: side-lying bodyweight (as on 15/10), same short range", warn:"Cramp → end the set, lower the weight"},
-    {k:"adduz",   n:"Hip adduction machine",        s:2, r:"10-15", rir:"1", rest:"90s", cue:"Chase the <b>feeling</b>, not the weight. 27×15 at conn 3 → <b>+1 step</b>"},
-    {k:"legext",  n:"Single-leg leg extension",     s:2, r:"8-12",  rir:"1", rest:"alternate legs", m:true, nw:true, uni:true,
-     cue:"<b>Alternate L/R with no rest</b>"},
-    {k:"legpress",n:"Single-leg horizontal leg press", s:2, r:"8-12", rir:"1-2", rest:"alternate + 45-60s", nw:true, uni:true,
-     cue:"<b>Foot in line with the hip</b>, not centered · 3 s lowering · only the range you control. First set went to 15 reps → <b>start from 32 kg</b>. Right leg: stop where you can restart out of the bottom"},
-    {k:"hip",     n:"Hip thrust",                   s:2, r:"8-12",  rir:"1", rest:"2min", nw:true},
-    {k:"stacchi", n:"Romanian deadlift",            s:2, r:"6-9",   rir:"1-2", rest:"2min"},
-    {k:"legcurl", n:"Seated leg curl (the only one in the gym)", s:2, r:"7-10",  rir:"1", rest:"superset",
-     cue:"Back <b>flat against the pad</b>, hold the handles and pull yourself into the seat · stop the range <b>where the pelvis starts to move</b>, even if it is short",
-     warn:"If the lower back still moves: drop it and tell the coach — we swap it, we don't force it"},
-    {k:"calf",    n:"Standing calf raise",          s:2, r:"7-11",  rir:"1", rest:"90s", cue:"73×11 at the top of the range → <b>+1 step</b>"}
+  {k:"legsa", label:"LEGS A", color:"var(--legs)", warm:"Hip mobility 5 min: 90/90 seated 8 per side · half-kneeling hip flexor 30-40s per side · deep squat hold 30-60s", ex:[
+    {k:"abduz",   n:"STANDING cable hip abduction", s:3, r:"10-15", rir:"1", rest:"90s",
+     cue:"<b>The weak muscle: glute medius.</b> Neutral hip · toes turned slightly out · short range 30-40° · torso still. The standing leg works too — that is half the point",
+     warn:"If the cable is taken: side-lying bodyweight, same short range"},
+    {k:"legpress",n:"Single-leg horizontal leg press", s:3, r:"8-12", rir:"1-2", rest:"alternate + 45-60s", uni:true,
+     cue:"The heavy one of the day, and the only single-leg exercise here. <b>Foot in line with the hip</b>, not centered · 3 s lowering · only the range you control. 32 kg felt easy at 15 reps → <b>+1 step</b>"},
+    {k:"legext",  n:"Leg extension, BOTH legs",     s:3, r:"8-12",  rir:"1", rest:"90s", nw:true,
+     cue:"Both legs here on purpose: single-leg your right stops because of the <b>hip</b>, not the quad, so the quad never gets the work. Two legs = stable pelvis = the quad is what fails"},
+    {k:"legcurl", n:"Seated leg curl (hamstrings, lengthened)", s:3, r:"7-10", rir:"1", rest:"90s",
+     cue:"<b>This replaces the Romanian deadlift.</b> Seated = hip bent = the hamstring starts lengthened, which is what the RDL was for — minus the lower back. 3 s lowering, back flat against the pad, stop the range where the pelvis starts to move"},
+    {k:"hip",     n:"Hip thrust",                   s:3, r:"8-12",  rir:"1", rest:"2min", cue:"Glute in full shortening. 80 → 100 kg in a week: keep going"},
+    {k:"calf",    n:"Calf raise on the leg press",   s:3, r:"7-11",  rir:"1", rest:"90s", cue:"On the horizontal leg press — there is no standing calf machine. Same station as exercise 2, no setup change. 73×15 → <b>+1 step</b>"}
   ]},
   {k:"upper", label:"UPPER", color:"var(--upper)", warm:"Cable external rotations 2 × 12-15, light", ex:[
-    {k:"latuni",    n:"Single-arm lat pulldown",    s:2, r:"6-10",  rir:"0", rest:"2min", uni:true, cue:"Tempo <b>3-1-1</b>, same load (conn 1 last week). Symmetrical at 32 kg: keep it that way"},
-    {k:"csrow_o",   n:"Chest-supported row — overhand grip", s:2, r:"6-10", rir:"0", rest:"2min", cue:"Overhand, wide grip. Tempo <b>3-1-1</b>, <b>same load</b> (conn 1 last week)", warn:"Pain between the right shoulder blade and the armpit on 16/10 → stop the set, don't push the last reps"},
-    {k:"chestpress",n:"Cable chest press",          s:2, r:"8-12",  rir:"0", rest:"2min", nw:true,
-     cue:"<b>Handles touch at the end</b>, even crossing over. Don't open too wide at the start. 25/side ×12+12 → <b>+1 step</b>",
-     warn:"On 16/10 the shoulders stopped the set, not the chest: keep the start narrower and do the external rotations first"},
-    {k:"lento",     n:"Smith machine shoulder press, 60-75° bench", s:2, r:"7-12", rir:"1-2", rest:"2min", cue:"If it hurts: shorten the range, or drop it"},
-    {k:"alzate",    n:"Dumbbell lateral raise",     s:2, r:"10-15", rir:"0", rest:"90s", cue:"<b>No cheating.</b> Never above shoulder height"},
-    {k:"pushdown",  n:"Cable triceps pushdown, 45° bench", s:2, r:"9-13", rir:"0", rest:"superset"},
-    {k:"curl45",    n:"Incline dumbbell curl, 45° bench", s:2, r:"8-10", rir:"0", rest:"90s", cue:"10×11+11, over the range → <b>12 kg</b>"}
+    {k:"latuni",    n:"Single-arm lat pulldown",    s:3, r:"6-10",  rir:"0", rest:"2min", uni:true, cue:"Tempo 3-1-1. Symmetrical at 32 kg: keep it that way", warn:"Last reps: if the shoulder fatigues before the back, close the set"},
+    {k:"csrow_o",   n:"Chest-supported row — overhand grip", s:3, r:"6-10", rir:"0", rest:"2min",
+     cue:"Overhand, wide grip. Tempo 3-1-1. <b>Do not chase the stretch at the bottom</b> — you proved it yourself on 23/10: without it, no pain and more load"},
+    {k:"chestpress",n:"Cable chest press",          s:3, r:"8-12",  rir:"0", rest:"2min", cue:"<b>Handles touch at the end</b>, even crossing over. Don't open too wide at the start — the form you were shown on 30/10, zero shoulder trouble"},
+    {k:"lento",     n:"Smith machine shoulder press, 60-75° bench", s:3, r:"7-12", rir:"1-2", rest:"2min", cue:"Guided. 30×12 clean → <b>+1 step</b>. If it hurts: shorten the range, or it goes"},
+    {k:"curlcable", n:"Cable curl, arm behind the body (lengthened)", s:2, r:"8-12", rir:"0", rest:"90s", cue:"Second weekly exposure, 2 sets: this is a recall, not the main work"},
+    {k:"lorenzo",   n:"Lorenzo press (triceps, lengthened)", s:2, r:"8-11", rir:"0", rest:"90s",
+     cue:"Second weekly exposure, 2 sets", warn:"If the left shoulder complains in this position, swap it for the push down that day"}
+  ]},
+  {k:"legsb", label:"LEGS B", color:"var(--legs)", warm:"Hip mobility 5 min: 90/90 seated 8 per side · half-kneeling hip flexor 30-40s per side · deep squat hold 30-60s", ex:[
+    {k:"abduz",   n:"STANDING cable hip abduction", s:3, r:"10-15", rir:"1", rest:"90s", cue:"Second exposure of the weak muscle. Same cues as Legs A"},
+    {k:"legext",  n:"Leg extension, SINGLE leg",    s:2, r:"8-12",  rir:"1", rest:"alternate legs", m:true, uni:true,
+     cue:"<b>The asymmetry test, not volume</b> — that is why it stays at 2 sets per leg. Log L and R separately. Note what stops you: the quad or the hip"},
+    {k:"legcurl", n:"Seated leg curl (hamstrings, lengthened)", s:3, r:"7-10", rir:"1", rest:"90s", cue:"Second exposure. 3 s lowering, stop where the pelvis moves"},
+    {k:"hip",     n:"Hip thrust",                   s:3, r:"8-12",  rir:"1", rest:"2min", cue:"Second exposure"},
+    {k:"adduz",   n:"Hip adduction machine",        s:3, r:"10-15", rir:"1", rest:"90s", cue:"Chase the <b>feeling</b>, not the weight. 29.5×15 → <b>+1 step</b>"}
   ]}
 ];
 const FB = [["voglia","Motivation"],["mood","Mood"],["energia","Energy"],["rpe","RPE"]];
@@ -325,11 +335,14 @@ let sb=null, online=false, sessions=[], curDay=defaultDay(), tab="log", draft=nu
 
 function defaultDay(){
   const w=new Date().getDay(); // 0 dom
-  return ({1:"push",2:"pull",4:"legs",5:"upper"})[w] || "push";
+  return ({1:"push",2:"pull",4:"legsa",5:"upper",6:"legsb"})[w] || "push";
 }
 function iso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function today(){ return iso(new Date()); }
 function dayDef(k){ return DAYS.find(d=>d.k===k); }
+/* Le sessioni fino al 29/10 sono salvate come "legs": la giornata non era ancora divisa.
+   Per storico e "ultima volta" valgono come Legs A, così il confronto non parte da zero. */
+function dayMatch(saved, k){ return saved===k || (k==="legsa" && saved==="legs"); }
 function sid(date,day){ return date+"-"+day; }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function fmtD(iso){ const [y,m,d]=iso.split("-"); return d+"/"+m; }
@@ -368,7 +381,7 @@ function renderDays(){
 
 function prevFor(day, exKey){
   const id=sid(today(),day);
-  const past=sessions.filter(s=>s.body.day===day && s.id!==id);
+  const past=sessions.filter(s=>dayMatch(s.body.day,day) && s.id!==id);
   for(const s of past){ const e=s.body.exercises?.[exKey]; if(e&&e.sets?.some(x=>x&&(x.kg||x.reps))) return {date:s.body.date,e}; }
   return null;
 }
@@ -555,7 +568,7 @@ function renderHist(){
     return;
   }
   const d=dayDef(curDay);
-  const mine=sessions.filter(s=>s.body.day===curDay).slice(0,12);
+  const mine=sessions.filter(s=>dayMatch(s.body.day,curDay)).slice(0,12);
   let h=`<div class="sec"><div class="sect">${d.label} · last ${mine.length} sessions</div><div class="card">`;
   if(!mine.length){ h+=`<div class="empty">No <b style="display:inline">${d.label}</b> sessions yet.</div>`; }
   mine.forEach(s=>{
@@ -575,7 +588,7 @@ function renderHist(){
 
   h+=`<div class="sec"><div class="sect">Progress by exercise · top set</div><div class="card">`;
   d.ex.forEach(x=>{
-    const pts=sessions.filter(s=>s.body.day===curDay).map(s=>({d:s.body.date,e:s.body.exercises?.[x.k]}))
+    const pts=sessions.filter(s=>dayMatch(s.body.day,curDay)).map(s=>({d:s.body.date,e:s.body.exercises?.[x.k]}))
       .filter(p=>p.e&&p.e.sets?.some(z=>z&&z.kg)).slice(0,5).reverse();
     const txt = pts.length
       ? pts.map(p=>{ const best=Math.max(...p.e.sets.filter(z=>z&&z.kg).map(z=>z.kg)); return best; }).join(" → ")+" kg"
