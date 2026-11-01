@@ -9,7 +9,8 @@ create table if not exists rhino_sessions (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
   date        date not null,
-  day         text not null check (day in ('push', 'pull', 'legs', 'upper')),
+  -- 'legs' = sessioni fino al 29/10, prima che la giornata gambe fosse divisa in A e B
+  day         text not null check (day in ('push', 'pull', 'legs', 'legsa', 'legsb', 'upper')),
   -- i 4 feedback di Lemme, 1-5
   voglia      smallint check (voglia  between 1 and 5),
   mood        smallint check (mood    between 1 and 5),
