@@ -66,6 +66,16 @@ header{
 .hrow{display:flex; align-items:center; gap:10px; padding:10px 16px 8px;}
 .brand{font-family:var(--display); font-weight:800; font-size:15px; letter-spacing:-.2px; flex:1 1 auto; min-width:0}
 .brand small{display:block;font-family:var(--body);font-weight:500;font-size:11px;color:var(--fg-faint);letter-spacing:.3px;text-transform:uppercase}
+.autos{max-width:560px; margin:4px auto 0; font-size:11px; font-weight:600; color:var(--fg-faint); text-align:right}
+.autos.ok{color:var(--ok)}
+.autos.warn{color:var(--warn)}
+.rescue{margin:0 16px 12px; padding:12px 13px; border-radius:12px; background:var(--warn-bg); border:1px solid transparent}
+.rescue h3{margin:0 0 3px; font-family:var(--display); font-size:14px; color:var(--warn)}
+.rescue p{margin:0 0 9px; font-size:12px; line-height:1.45; color:var(--fg-dim)}
+.rescue .row{display:flex; gap:7px; align-items:center; margin-top:7px; flex-wrap:wrap}
+.rescue .what{flex:1; font-size:12.5px; font-weight:700; min-width:120px}
+.rescue button{font-size:12px; font-weight:700; padding:7px 11px; border-radius:9px; border:1px solid var(--line); background:var(--surface); color:var(--fg)}
+.rescue button.go{background:var(--warn); border-color:var(--warn); color:#fff}
 .sync{font-size:11px; font-weight:600; padding:3px 8px; border-radius:99px; background:var(--surface-2); color:var(--fg-dim); white-space:nowrap}
 .sync.on{background:var(--ok-bg); color:var(--ok)}
 .sync.off{background:var(--warn-bg); color:var(--warn)}
@@ -237,6 +247,8 @@ body{padding-top:env(safe-area-inset-top,0px)}
   <div class="days" id="days"></div>
 </header>
 
+<div id="rescue" class="rescue" hidden></div>
+
 <main>
   <div id="view-log"></div>
   <div id="view-hist" hidden></div>
@@ -249,6 +261,7 @@ body{padding-top:env(safe-area-inset-top,0px)}
     <button class="save" id="btn-save">Save session</button>
   </div>
   <div class="msg" id="msg"></div>
+  <div class="autos" id="autos"></div>
 </div>
 </div>
 
@@ -700,7 +713,7 @@ function render(){
   document.getElementById("view-hist").hidden = tab!=="hist";
   document.getElementById("bar").hidden = tab!=="log";
   if(tab==="log") renderLog(); else { renderHist(); renderFoot(); }
-  refreshSave(); paintTimer();
+  refreshSave(); paintTimer(); paintAuto(); paintRescue();
 }
 function renderFoot(){
   const el=document.getElementById("view-hist");
@@ -712,10 +725,11 @@ function renderFoot(){
     await sb.auth.signOut(); location.reload();
   };
 }
-function filled(){
-  return Object.values(draft.exercises).some(e=>e.conn || e.note?.trim() || e.sets?.some(s=>s&&(s.kg||s.reps)));
+function hasData(body){
+  return Object.values(body?.exercises||{}).some(e=>e.conn || e.note?.trim() || e.sets?.some(s=>s&&(s.kg||s.reps)));
 }
-function markDirty(){ refreshSave(); }
+function filled(){ return hasData(draft); }
+function markDirty(){ refreshSave(); scheduleAuto(); }
 function refreshSave(){
   const b=document.getElementById("btn-save");
   const id=sid(draft.date,draft.day);
@@ -728,6 +742,7 @@ function msg(t,err){ const m=document.getElementById("msg"); m.textContent=t||""
 
 async function saveSession(){
   if(saving) return;
+  clearTimeout(autoT); clearTimeout(autoRetryT);
   saving=true; refreshSave(); msg("");
   const tm=getTimer();
   if(tm){ draft.startedAt=tm.start; draft.endedAt=tm.end||new Date().toISOString(); saveDraft(); }
@@ -737,6 +752,7 @@ async function saveSession(){
   try{
     await pushSession(body);
     dropDraft(body.day);
+    autoAt=new Date(); autoErr=false;
     msg("Saved to the database.");
     await sync();
   }catch(e){
@@ -752,6 +768,108 @@ async function saveSession(){
   saving=false; refreshSave();
 }
 document.getElementById("btn-save").onclick=saveSession;
+
+/* ---------- salvataggio automatico ----------
+   Il tasto Salva resta, ma non serve ricordarselo: ogni modifica programma una scrittura
+   nel database dopo 4 secondi di pausa, e la RPC e' un upsert su (utente, data, giorno),
+   quindi riscrivere la stessa sessione non crea duplicati. La bozza locale NON viene
+   cancellata: resta la copia di lavoro, cosi' si continua a scrivere senza aspettare la rete. */
+const AUTO_MS=4000, AUTO_RETRY_MS=30000;
+let autoT=null, autoRetryT=null, autoSaving=false, autoAt=null, autoErr=false;
+
+function scheduleAuto(){
+  clearTimeout(autoT);
+  if(!hasData(draft)) return;
+  autoT=setTimeout(doAuto, AUTO_MS);
+  paintAuto();
+}
+async function doAuto(){
+  clearTimeout(autoT); clearTimeout(autoRetryT);
+  if(autoSaving || saving || !sb || !hasData(draft)) return;
+  autoSaving=true; paintAuto();
+  const tm=getTimer();
+  if(tm){ draft.startedAt=tm.start; draft.endedAt=tm.end||new Date().toISOString(); saveDraft(); }
+  const body=JSON.parse(JSON.stringify(draft));
+  body.savedAt=new Date().toISOString();
+  try{
+    await pushSession(body);
+    autoAt=new Date(); autoErr=false;
+    try{ await fetchSessions(); }catch(e){}
+  }catch(e){
+    autoErr=true;
+    autoRetryT=setTimeout(doAuto, AUTO_RETRY_MS);
+  }
+  autoSaving=false; paintAuto(); refreshSave();
+}
+function paintAuto(){
+  const el=document.getElementById("autos"); if(!el) return;
+  const id=sid(draft.date,draft.day);
+  const inDb=sessions.some(s=>s.id===id);
+  let t="", cls="";
+  if(!hasData(draft)) t="";
+  else if(autoSaving) t="saving\u2026";
+  else if(autoErr) t=inDb ? "saved \u00b7 last change not uploaded yet" : "NOT saved yet \u2014 no connection, it will retry";
+  else if(autoAt) t="saved automatically at "+autoAt.toTimeString().slice(0,5), cls="ok";
+  else if(inDb) t="saved", cls="ok";
+  else t="not saved yet", cls="warn";
+  el.textContent=t; el.className="autos"+(cls?" "+cls:"");
+}
+/* app che va in background o si chiude: si scrive subito, senza aspettare i 4 secondi */
+function flushAuto(){ if(hasData(draft) && !autoSaving) doAuto(); }
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushAuto(); });
+window.addEventListener("pagehide", flushAuto);
+
+/* ---------- bozze di giorni passati mai arrivate al database ----------
+   La bozza e' indicizzata per data: quella di un giorno passato non viene piu' aperta
+   dall'interfaccia e resterebbe invisibile nella memoria del telefono. Qui si recupera. */
+function orphanDrafts(){
+  const out=[];
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(!k || !k.startsWith(LS)) continue;
+      const id=k.slice(LS.length);
+      const date=id.slice(0,10);
+      if(date===today()) continue;
+      const body=lsGet(k,null);
+      if(!body || !hasData(body)) continue;
+      out.push({key:k, id, date, day:body.day||id.slice(11), body});
+    }
+  }catch(e){}
+  return out.sort((a,b)=>a.date<b.date?-1:1);
+}
+function paintRescue(){
+  const el=document.getElementById("rescue"); if(!el) return;
+  const list=orphanDrafts();
+  el.hidden = list.length===0;
+  if(!list.length){ el.innerHTML=""; return; }
+  el.innerHTML = `<h3>${list.length===1?"A session was never saved":list.length+" sessions were never saved"}</h3>
+    <p>You wrote these down but the Save button was never pressed, so they never reached the database. They are still on this phone.</p>` +
+    list.map((o,i)=>`<div class="row"><span class="what">${esc(fmtD(o.date))} \u00b7 ${esc(String(o.day).toUpperCase())}</span>
+      <button class="go" data-save="${i}">Save now</button>
+      <button data-drop="${i}">Discard</button></div>`).join("");
+  el.querySelectorAll("[data-save]").forEach(b=>b.onclick=async()=>{
+    const o=list[Number(b.dataset.save)];
+    b.disabled=true; b.textContent="Saving\u2026";
+    const body=JSON.parse(JSON.stringify(o.body));
+    body.savedAt=new Date().toISOString();
+    try{
+      await pushSession(body);
+      lsDel(o.key);
+      msg("Session of "+fmtD(o.date)+" saved to the database.");
+      await sync();
+    }catch(e){
+      b.disabled=false; b.textContent="Save now";
+      msg(isNetErr(e) ? "You're offline: connect and try again, the session stays on this phone."
+                      : "Not saved ("+(e.message||"error")+"). It stays on this phone.", true);
+    }
+  });
+  el.querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{
+    const o=list[Number(b.dataset.drop)];
+    if(!confirm("Discard the session of "+fmtD(o.date)+" ("+String(o.day).toUpperCase()+")? It cannot be recovered.")) return;
+    lsDel(o.key); paintRescue();
+  });
+}
 
 /* ---------- timer durata sessione ----------
    Stato in localStorage per sessione: {start, end}; end null = in corso. Sopravvive a chiusura app e salvataggi.
