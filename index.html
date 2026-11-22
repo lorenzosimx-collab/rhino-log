@@ -66,6 +66,9 @@ header{
 .hrow{display:flex; align-items:center; gap:10px; padding:10px 16px 8px;}
 .brand{font-family:var(--display); font-weight:800; font-size:15px; letter-spacing:-.2px; flex:1 1 auto; min-width:0}
 .brand small{display:block;font-family:var(--body);font-weight:500;font-size:11px;color:var(--fg-faint);letter-spacing:.3px;text-transform:uppercase}
+.unit{display:flex; gap:0; border:1px solid var(--line); border-radius:99px; overflow:hidden; background:var(--surface-2)}
+.unit button{font-size:11px; font-weight:800; letter-spacing:.3px; padding:3px 9px; border:0; background:transparent; color:var(--fg-faint)}
+.unit button[aria-pressed="true"]{background:var(--fg); color:var(--bg)}
 .autos{max-width:560px; margin:4px auto 0; font-size:11px; font-weight:600; color:var(--fg-faint); text-align:right}
 .autos.ok{color:var(--ok)}
 .autos.warn{color:var(--warn)}
@@ -238,6 +241,9 @@ body{padding-top:env(safe-area-inset-top,0px)}
 <header>
   <div class="hrow">
     <div class="brand">Rhino Log<small id="meso">Mesocycle 2 · Volume</small></div>
+    <div class="unit" id="unit" role="group" aria-label="Weight unit">
+      <button data-unit="kg" aria-pressed="true">KG</button><button data-unit="lb" aria-pressed="false">LB</button>
+    </div>
     <div class="sync" id="sync">connecting…</div>
   </div>
   <div class="tabs">
@@ -477,8 +483,8 @@ function renderLog(){
     h+=`</div>`;
     if(pv){
       const txt=pv.e.sets.filter(Boolean).map(z=> x.uni
-        ? `${z.kg??"–"}×${z.reps??"–"} / ${z.kg2??"–"}×${z.reps2??"–"}`
-        : `${z.kg??"–"}×${z.reps??"–"}`).join("  ·  ");
+        ? `${fmtW(z.kg)}×${z.reps??"–"} / ${fmtW(z.kg2)}×${z.reps2??"–"}`
+        : `${fmtW(z.kg)}×${z.reps??"–"}`).join("  ·  ");
       h+=`<div class="prev"><b>${fmtD(pv.date)}</b> &nbsp;${esc(txt)}${pv.e.conn?`  ·  conn ${pv.e.conn}`:""}</div>`;
     }
     h+=`<div class="conn"><div class="connl">Conn.</div><div class="pick" data-conn="${x.k}">
@@ -506,9 +512,44 @@ function renderLog(){
   document.getElementById("view-log").innerHTML=h;
   wireLog();
 }
+/* ---------- unita' di peso ----------
+   Nel database i carichi stanno SEMPRE in kg (colonna numeric(5,1)): l'unita' e' solo
+   come li scrivi e come li leggi, e vale per questo telefono. Le libbre si convertono
+   in kg in ingresso e si riconvertono in uscita; l'arrotondamento a un decimale sul kg
+   fa tornare il numero della macchina (90 lb -> 40,8 kg -> 90 lb). */
+const UNITK="rhinolog.unit", LBxKG=2.2046226218;
+let wunit = lsGet(UNITK,"kg")==="lb" ? "lb" : "kg";
+function toUnit(kg){ return kg==null ? null : (wunit==="lb" ? kg*LBxKG : kg); }
+function fromUnit(v){ return v==null ? null : Math.round((wunit==="lb" ? v/LBxKG : v)*10)/10; }
+/* Il numero come va mostrato. In libbre si arrotonda al mezzo chilo di libbra: il kg nel
+   database ha un solo decimale, quindi la riconversione sbaglia al massimo di 0,11 lb, e
+   i dischi sono comunque multipli di 2,5 lb — cosi' 2,5 lb restano 2,5 e non 2,4. */
+function dispW(kg){
+  let v=toUnit(kg);
+  if(v==null || Number.isNaN(v)) return "";
+  if(wunit==="lb"){ v=Math.round(v*2)/2; return Number.isInteger(v)?String(v):v.toFixed(1); }
+  return Math.abs(v-Math.round(v))<0.2 ? String(Math.round(v)) : (Math.round(v*10)/10).toFixed(1);
+}
+function fmtW(kg){ const t=dispW(kg); return t===""?"–":t; }
+function setUnit(u){
+  wunit = u==="lb" ? "lb" : "kg";
+  try{ localStorage.setItem(UNITK, wunit); }catch(e){}
+  paintUnit(); render();
+}
+function paintUnit(){
+  document.querySelectorAll("#unit [data-unit]").forEach(b=>
+    b.setAttribute("aria-pressed", String(b.dataset.unit===wunit)));
+}
+document.querySelectorAll("#unit [data-unit]").forEach(b=>
+  b.onclick=()=>setUnit(b.dataset.unit));
+
 function numIn(ex,s,f,unit,val){
-  return `<div class="fi"><input type="number" inputmode="decimal" step="0.5" min="0"
-    data-ex="${ex}" data-s="${s}" data-f="${f}" value="${val??""}" aria-label="${unit}"><u>${unit}</u></div>`;
+  const w = f.indexOf("kg")===0;
+  const lab = w ? wunit : unit;
+  const v = w ? dispW(val) : (val??"");
+  const step = w ? (wunit==="lb" ? "1" : "0.5") : "1";
+  return `<div class="fi"><input type="number" inputmode="decimal" step="${step}" min="0"
+    data-ex="${ex}" data-s="${s}" data-f="${f}" value="${v}" aria-label="${lab}"><u>${lab}</u></div>`;
 }
 function plainIn(path,ph,val){
   return `<div class="fi"><input type="number" inputmode="numeric" min="0" data-path="${path}" placeholder="${ph}" value="${val??""}"></div>`;
@@ -522,7 +563,8 @@ function wireLog(){
       draft.exercises[ex] = draft.exercises[ex] || {sets:[],conn:null};
       const arr=draft.exercises[ex].sets;
       arr[+s]=arr[+s]||{};
-      arr[+s][f] = i.value===""?undefined:Number(i.value);
+      arr[+s][f] = i.value==="" ? undefined
+        : (f.indexOf("kg")===0 ? fromUnit(Number(i.value)) : Number(i.value));
       saveDraft(); markDirty();
     };
   });
@@ -604,7 +646,7 @@ function renderHist(){
     const pts=sessions.filter(s=>dayMatch(s.body.day,curDay)).map(s=>({d:s.body.date,e:s.body.exercises?.[x.k]}))
       .filter(p=>p.e&&p.e.sets?.some(z=>z&&z.kg)).slice(0,5).reverse();
     const txt = pts.length
-      ? pts.map(p=>{ const best=Math.max(...p.e.sets.filter(z=>z&&z.kg).map(z=>z.kg)); return best; }).join(" → ")+" kg"
+      ? pts.map(p=>{ const best=Math.max(...p.e.sets.filter(z=>z&&z.kg).map(z=>z.kg)); return dispW(best); }).join(" → ")+" "+wunit
       : "<small>no data</small>";
     h+=`<div class="hrow2"><div class="hd" style="flex:1 1 auto;min-width:0">${esc(x.n)}</div>
       <div class="hv">${txt}</div></div>`;
@@ -708,6 +750,7 @@ async function sync(){
 /* ---------- comune ---------- */
 function grow(ta){ ta.style.height="auto"; ta.style.height=ta.scrollHeight+"px"; }
 function render(){
+  paintUnit();
   renderDays();
   document.getElementById("view-log").hidden = tab!=="log";
   document.getElementById("view-hist").hidden = tab!=="hist";
